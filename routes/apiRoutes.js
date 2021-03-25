@@ -1,27 +1,38 @@
-const router = require("express").Router();
-const store = require("../db/store");
+const fs = require("fs");
+const path = require("path");
+var notesData = require("../db/db.json");
 
-// GET "/api/notes" responds with all notes from the database
-router.get("/notes", (req, res) => {
-  store
-    .getNotes()
-    .then((notes) => res.json(notes))
-    .catch((err) => res.status(500).json(err));
-});
+module.exports = function (app) {
+  app.get("/api/notes", function (req, res) {
+    console.log(notesData);
+    res.json(
+      notesData.map(function (note, index) {
+        return { ...note, id: index };
+      })
+    );
+  });
 
-router.post("/notes", (req, res) => {
-  store
-    .addNote(req.body)
-    .then((note) => res.json(note))
-    .catch((err) => res.status(500).json(err));
-});
+  app.post("/api/notes", function (req, res) {
+    notesData.push(req.body);
+    fs.writeFile(
+      path.resolve(__dirname, "../db/db.json"),
+      JSON.stringify(notesData),
+      function (error) {
+        if (error) console.error(error);
+        res.json(notesData);
+      }
+    );
+  })
+  app.delete("/api/notes/:id", function (req, res) {
+    notesData.splice(req.params.id, 1);
+    fs.writeFile(
+      path.resolve(__dirname, "../db/db.json"),
+      JSON.stringify(notesData),
+      function (error) {
+        if (error) console.error(error);
+        res.json(notesData);
+      }
+    );
+  });
 
-// DELETE "/api/notes" deletes the note with an id equal to req.params.id
-router.delete("/notes/:id", (req, res) => {
-  store
-    .removeNote(req.params.id)
-    .then(() => res.json({ ok: true }))
-    .catch((err) => res.status(500).json(err));
-});
-
-module.exports = router;
+};
